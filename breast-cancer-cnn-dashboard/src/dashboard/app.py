@@ -128,7 +128,7 @@ def main():
                 )
             else:
                 selected_model = None
-                st.warning("No model checkpoints found")
+                st.warning("Models directory exists but no checkpoints found (.pth files)")
         else:
             selected_model = None
             st.warning("Models directory not found")
@@ -153,7 +153,12 @@ def main():
         st.subheader("📁 Data Paths")
         data_dir = Path("data")
         if data_dir.exists():
-            st.success("Data directory found")
+            raw_dir = Path("data/raw")
+            processed_dir = Path("data/processed")
+            if raw_dir.exists() and any(raw_dir.iterdir()):
+                st.success("Data directory found")
+            else:
+                st.warning("Data directory exists but raw/ is empty - run preprocessing or add DICOM files")
         else:
             st.warning("Data directory not found")
         

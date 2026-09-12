@@ -151,13 +151,20 @@ ehthumbs.db
 Thumbs.db
 
 # Project specific
-data/raw/
-data/processed/
-data/external/
-assets/models/
-logs/
-mlruns/
-reports/exploration/
+# Ignore contents but keep directories via .gitkeep
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/external/*
+!data/external/.gitkeep
+assets/models/*
+!assets/models/.gitkeep
+logs/*
+!logs/.gitkeep
+mlruns/*
+reports/exploration/*
+!reports/exploration/.gitkeep
 reports/technical_report.pdf
 *.pth
 *.onnx
