@@ -1,5 +1,5 @@
 # Streamlit Cloud optimized requirements - minimal
-# Core Deep Learning (CPU)
+# Core Deep Learning (CPU) - FORCE REBUILD v2
 torch==2.1.0
 torchvision==0.16.0
 
