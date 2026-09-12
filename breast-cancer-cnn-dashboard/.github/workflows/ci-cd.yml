@@ -1,0 +1,313 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  release:
+    types: [published]
+
+env:
+  PYTHON_VERSION: "3.10"
+  PYTORCH_VERSION: "2.1"
+  CUDA_VERSION: "12.1"
+
+jobs:
+  # Code quality checks
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install black flake8 isort mypy
+
+      - name: Check formatting with Black
+        run: black --check src/ main.py tests/
+
+      - name: Check import sorting with isort
+        run: isort --check-only src/ main.py tests/
+
+      - name: Lint with flake8
+        run: flake8 src/ main.py tests/
+
+      - name: Type check with mypy
+        run: mypy src/ --ignore-missing-imports
+
+  # Unit tests
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-mock
+
+      - name: Run tests
+        run: |
+          pytest tests/ -v --cov=src --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+
+  # Integration tests (CPU only)
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Create synthetic test data
+        run: |
+          python -c "
+          import numpy as np
+          from PIL import Image
+          import os
+          
+          # Create test directories
+          os.makedirs('data/raw/Non-IDC', exist_ok=True)
+          os.makedirs('data/raw/IDC', exist_ok=True)
+          
+          # Generate synthetic images
+          for i in range(20):
+              img = np.random.randint(0, 255, (50, 50, 3), dtype=np.uint8)
+              Image.fromarray(img).save(f'data/raw/Non-IDC/test_{i}.png')
+              img = np.random.randint(0, 255, (50, 50, 3), dtype=np.uint8)
+              Image.fromarray(img).save(f'data/raw/IDC/test_{i}.png')
+          "
+
+      - name: Run data exploration
+        run: python main.py --mode explore
+
+      - name: Run preprocessing
+        run: python main.py --mode preprocess
+
+      - name: Run training (quick test)
+        run: python main.py --mode train --epochs 2
+
+      - name: Run evaluation
+        run: python main.py --mode evaluate
+
+      - name: Generate report
+        run: python main.py --mode report
+
+      - name: Verify outputs
+        run: |
+          ls -la assets/models/
+          ls -la reports/
+          test -f reports/technical_report.pdf
+
+  # Docker build test
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: breast-cancer-cnn:test
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test Docker image
+        run: |
+          docker run --rm breast-cancer-cnn:test python -c "import src; print('Import successful')"
+
+  # GPU tests (self-hosted runner with GPU required)
+  gpu-test:
+    name: GPU Tests
+    runs-on: [self-hosted, gpu]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify GPU
+        run: nvidia-smi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies with CUDA
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+      - name: Run GPU training test
+        run: |
+          python -c "
+          import torch
+          print(f'CUDA available: {torch.cuda.is_available()}')
+          print(f'GPU: {torch.cuda.get_device_name(0)}')
+          
+          # Quick model test
+          from src.models import create_model
+          model = create_model('CustomCNN').cuda()
+          x = torch.randn(4, 3, 50, 50).cuda()
+          out = model(x)
+          print(f'Forward pass successful: {out.shape}')
+          "
+
+  # Release build
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [test, integration-test, docker-build]
+    if: github.event_name == 'release' && github.event.action == 'published'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/breast-cancer-cnn:${{ steps.version.outputs.VERSION }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/breast-cancer-cnn:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Generate release notes
+        run: |
+          cat <<EOF > release_notes.md
+          ## Breast Cancer CNN Classifier ${{ steps.version.outputs.VERSION }}
+          
+          ### Changes
+          - See commit history for details
+          
+          ### Docker
+          \`\`\`bash
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/breast-cancer-cnn:${{ steps.version.outputs.VERSION }}
+          \`\`\`
+          
+          ### Quick Start
+          \`\`\`bash
+          docker run -p 8501:8501 -v \$(pwd)/data:/app/data ${{ secrets.DOCKERHUB_USERNAME }}/breast-cancer-cnn:${{ steps.version.outputs.VERSION }}
+          \`\`\`
+          EOF
+
+      - name: Upload release assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./release_notes.md
+          asset_name: release_notes.md
+          asset_content_type: text/markdown
+
+  # Dependency check
+  dependencies:
+    name: Dependency Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Audit dependencies
+        run: pip-audit -r requirements.txt --format=json --output=audit.json || true
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-audit
+          path: audit.json
+
+  # Security scan
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Bandit
+        run: |
+          pip install bandit
+          bandit -r src/ -f json -o bandit-report.json || true
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-scan
+          path: bandit-report.json

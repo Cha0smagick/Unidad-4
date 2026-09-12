@@ -1,0 +1,186 @@
+version: '3.8'
+
+services:
+  # Main application service
+  breast-cancer-cnn:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: breast-cancer-cnn
+    restart: unless-stopped
+    ports:
+      - "8501:8501"   # Streamlit dashboard
+      - "6006:6006"   # TensorBoard
+      - "5000:5000"   # MLflow (if enabled)
+    volumes:
+      # Data directories
+      - ./data:/app/data
+      - ./assets:/app/assets
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+      - ./mlruns:/app/mlruns
+      # Configuration
+      - ./configs:/app/configs
+    environment:
+      - PYTHONPATH=/app/src
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Training service (runs once and exits)
+  breast-cancer-train:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: breast-cancer-train
+    command: python main.py --mode train --epochs 100
+    volumes:
+      - ./data:/app/data
+      - ./assets:/app/assets
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+      - ./mlruns:/app/mlruns
+      - ./configs:/app/configs
+    environment:
+      - PYTHONPATH=/app/src
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - training
+
+  # Evaluation service
+  breast-cancer-eval:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: breast-cancer-eval
+    command: python main.py --mode evaluate
+    volumes:
+      - ./data:/app/data
+      - ./assets:/app/assets
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+      - ./mlruns:/app/mlruns
+      - ./configs:/app/configs
+    environment:
+      - PYTHONPATH=/app/src
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - evaluation
+
+  # Data exploration service
+  breast-cancer-explore:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: breast-cancer-explore
+    command: python main.py --mode explore
+    volumes:
+      - ./data:/app/data
+      - ./reports:/app/reports
+      - ./configs:/app/configs
+    environment:
+      - PYTHONPATH=/app/src
+    profiles:
+      - exploration
+
+  # Full pipeline service
+  breast-cancer-full:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: breast-cancer-full
+    command: python main.py --mode full
+    volumes:
+      - ./data:/app/data
+      - ./assets:/app/assets
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+      - ./mlruns:/app/mlruns
+      - ./configs:/app/configs
+    environment:
+      - PYTHONPATH=/app/src
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - full
+
+  # MLflow tracking server (optional)
+  mlflow:
+    image: python:3.10-slim
+    container_name: breast-cancer-mlflow
+    command: >
+      sh -c "pip install mlflow psycopg2-binary &&
+             mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlruns"
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/mlruns
+    restart: unless-stopped
+    profiles:
+      - mlflow
+
+  # TensorBoard (optional)
+  tensorboard:
+    image: tensorflow/tensorflow:latest
+    container_name: breast-cancer-tensorboard
+    command: tensorboard --logdir /app/logs/tensorboard --host 0.0.0.0 --port 6006
+    ports:
+      - "6006:6006"
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+# Networks
+networks:
+  default:
+    name: breast-cancer-network
+
+# Volumes
+volumes:
+  mlruns:
+  data:
+  assets:
+  logs:
+  reports:
