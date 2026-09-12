@@ -1,7 +1,7 @@
-# Streamlit Cloud optimized requirements (no editable install)
-# Core Deep Learning (CPU-only for Streamlit Cloud)
-torch==2.1.0+cpu --index-url https://download.pytorch.org/whl/cpu
-torchvision==0.16.0+cpu --index-url https://download.pytorch.org/whl/cpu
+# Streamlit Cloud optimized requirements - minimal
+# Core Deep Learning (CPU)
+torch==2.1.0
+torchvision==0.16.0
 
 # Data Processing & Augmentation
 albumentations>=1.3.0
