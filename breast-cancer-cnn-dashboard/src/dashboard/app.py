@@ -167,12 +167,11 @@ def main():
         )
     
     # Main tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4 = st.tabs([
         "📊 Training History",
         "📈 Model Evaluation",
         "🔍 Live Prediction",
-        "📁 Data Explorer",
-        "📋 Report Generator"
+        "📁 Data Explorer"
     ])
     
     # Tab 1: Training History
@@ -494,33 +493,14 @@ def main():
                 with st.expander("View Full Exploration Report"):
                     report = load_evaluation_results(explore_path)  # Reuse JSON loader
                     st.json(report)
-        else:
+else:
             st.info("Run data preprocessing to generate split information")
     
-    # Tab 5: Report Generator
-    with tab5:
-        st.markdown('<div class="sub-header">Technical Report Generator</div>', unsafe_allow_html=True)
-        
-        st.markdown("""
-        Generate a comprehensive APA 7th edition technical report for the breast cancer classification project.
-        """)
-        
-        if st.button("Generate Report", type="primary"):
-            with st.spinner("Generating APA 7 technical report..."):
-                report_path = generate_technical_report()
-                st.success(f"Report generated: {report_path}")
-                
-                # Provide download
-                with open(report_path, 'rb') as f:
-                    st.download_button(
-                        label="Download Report (PDF)",
-                        data=f,
-                        file_name="breast_cancer_cnn_report.pdf",
-                        mime="application/pdf"
-                    )
-
-
-def run_evaluation(model_path: str, device: str, threshold: float):
+    # Note: Technical report is generated separately as LaTeX/PDF in the repository
+    # See scripts/generate_latex_report.py and reports/reporte_tecnico.tex
+    
+    # run_evaluation function
+    def run_evaluation(model_path: str, device: str, threshold: float):
     """Run model evaluation and save results."""
     device = torch.device(device)
     model = load_model(model_path, 'CustomCNN', device)
@@ -543,275 +523,6 @@ def run_evaluation(model_path: str, device: str, threshold: float):
     
     st.success("Evaluation completed!")
     st.rerun()
-
-
-def generate_technical_report() -> str:
-    """Generate APA 7 technical report as PDF."""
-    from fpdf import FPDF
-    
-    class TechnicalReport(FPDF):
-        def header(self):
-            self.set_font('Helvetica', 'B', 12)
-            self.cell(0, 10, 'Breast Cancer CNN Classification Technical Report', 0, 1, 'C')
-            self.line(10, 18, 200, 18)
-            self.ln(5)
-        
-        def footer(self):
-            self.set_y(-15)
-            self.set_font('Helvetica', 'I', 8)
-            self.cell(0, 10, f'Page {self.page_no()}/{{nb}}', 0, 0, 'C')
-        
-        def section_title(self, title):
-            self.set_font('Helvetica', 'B', 14)
-            self.cell(0, 10, title, 0, 1, 'L')
-            self.ln(3)
-        
-        def subsection_title(self, title):
-            self.set_font('Helvetica', 'B', 12)
-            self.cell(0, 8, title, 0, 1, 'L')
-            self.ln(2)
-        
-        def body_text(self, text):
-            self.set_font('Helvetica', '', 11)
-            self.multi_cell(0, 6, text)
-            self.ln(3)
-        
-        def bullet_point(self, text):
-            self.set_font('Helvetica', '', 11)
-            self.cell(10, 6, '')
-            self.cell(5, 6, chr(8226))
-            self.multi_cell(0, 6, text)
-            self.ln(1)
-    
-    pdf = TechnicalReport()
-    pdf.alias_nb_pages()
-    pdf.add_page()
-    
-    # Title Page
-    pdf.set_font('Helvetica', 'B', 24)
-    pdf.ln(30)
-    pdf.cell(0, 15, 'Breast Cancer CNN Classification', 0, 1, 'C')
-    pdf.set_font('Helvetica', '', 18)
-    pdf.cell(0, 12, 'Invasive Ductal Carcinoma Detection', 0, 1, 'C')
-    pdf.cell(0, 12, 'Using Deep Convolutional Neural Networks', 0, 1, 'C')
-    pdf.ln(20)
-    pdf.set_font('Helvetica', '', 12)
-    pdf.cell(0, 10, 'Technical Report', 0, 1, 'C')
-    pdf.ln(10)
-    pdf.cell(0, 10, 'Prepared for: Maestria en Analitica de Datos', 0, 1, 'C')
-    pdf.cell(0, 10, 'Institution: Politecnico Grancolombiano', 0, 1, 'C')
-    pdf.cell(0, 10, 'Course: Metodos Supervisados - Unidad 4', 0, 1, 'C')
-    pdf.ln(20)
-    pdf.cell(0, 10, 'Date: 2024', 0, 1, 'C')
-    
-    # Table of Contents
-    pdf.add_page()
-    pdf.section_title('Table of Contents')
-    toc_items = [
-        '1. Introduction',
-        '2. Theoretical Framework',
-        '3. Methodology',
-        '4. Results',
-        '5. Conclusions',
-        '6. References'
-    ]
-    for item in toc_items:
-        pdf.body_text(item)
-    
-    # 1. Introduction
-    pdf.add_page()
-    pdf.section_title('1. Introduction')
-    pdf.body_text(
-        'Breast cancer is the most common malignancy among women worldwide, with invasive ductal carcinoma (IDC) '
-        'accounting for approximately 80% of all breast cancer cases. Early and accurate detection of IDC from '
-        'histopathology images is crucial for effective treatment planning and improved patient outcomes. '
-        'Traditional diagnosis relies on manual examination by pathologists, which is time-consuming, subject to '
-        'inter-observer variability, and limited by human fatigue.'
-    )
-    pdf.body_text(
-        'Deep learning, particularly Convolutional Neural Networks (CNNs), has demonstrated remarkable success in '
-        'medical image analysis tasks. CNNs can automatically learn hierarchical feature representations from raw '
-        'pixel data, eliminating the need for handcrafted features. This project implements a complete deep learning '
-        'pipeline for IDC detection from histopathology patches, including data preprocessing, model training, '
-        'comprehensive evaluation, and deployment-ready dashboard.'
-    )
-    pdf.body_text(
-        'The primary objectives of this work are: (1) to develop a robust CNN architecture for binary classification '
-        'of histopathology patches as IDC or non-IDC, (2) to implement rigorous preprocessing with proper train/validation/'
-        'test splits and data augmentation, (3) to evaluate model performance using multiple metrics including accuracy, '
-        'precision, recall, F1-score, and ROC-AUC, and (4) to provide an interactive dashboard for model monitoring '
-        'and clinical decision support.'
-    )
-    
-    # 2. Theoretical Framework
-    pdf.add_page()
-    pdf.section_title('2. Theoretical Framework')
-    
-    pdf.subsection_title('2.1 Convolutional Neural Networks')
-    pdf.body_text(
-        'Convolutional Neural Networks (LeCun et al., 1998) are a class of deep neural networks specifically designed '
-        'for processing grid-structured data such as images. The core building blocks include convolutional layers that '
-        'apply learnable filters to extract local features, pooling layers that reduce spatial dimensions while preserving '
-        'important features, and fully connected layers for final classification. Modern CNN architectures incorporate '
-        'batch normalization (Ioffe & Szegedy, 2015) to stabilize training, residual connections (He et al., 2016) '
-        'to enable deeper networks, and dropout (Srivastava et al., 2014) for regularization.'
-    )
-    
-    pdf.subsection_title('2.2 Transfer Learning and Medical Imaging')
-    pdf.body_text(
-        'Transfer learning (Pan & Yang, 2010) leverages pre-trained models on large datasets (e.g., ImageNet) as feature '
-        'extractors for downstream tasks with limited data. In medical imaging, where annotated datasets are often small, '
-        'transfer learning has become the de facto standard. Models pre-trained on natural images learn general visual '
-        'features (edges, textures, shapes) that transfer well to medical images (Tajbakhsh et al., 2016).'
-    )
-    
-    pdf.subsection_title('2.3 Evaluation Metrics for Medical Classification')
-    pdf.body_text(
-        'In medical diagnosis, the cost of false negatives (missing cancer) typically far exceeds the cost of false '
-        'positives. Therefore, recall (sensitivity) is often prioritized over precision. The ROC-AUC provides a '
-        'threshold-independent measure of discriminative ability, while the confusion matrix offers detailed insight '
-        'into classification errors. Bootstrap confidence intervals (Efron & Tibshirani, 1993) quantify the '
-        'uncertainty in performance estimates.'
-    )
-    
-    # 3. Methodology
-    pdf.add_page()
-    pdf.section_title('3. Methodology')
-    
-    pdf.subsection_title('3.1 Dataset Description')
-    pdf.body_text(
-        'The dataset consists of histopathology image patches extracted from whole-slide images of breast tissue '
-        'biopsies. Each patch is 50x50 pixels at 40x magnification, labeled as IDC (positive) or non-IDC (negative). '
-        'The dataset contains approximately 277,524 patches from 162 patients, with a class distribution reflecting '
-        'the natural prevalence of IDC in biopsy samples.'
-    )
-    
-    pdf.subsection_title('3.2 Data Preprocessing')
-    pdf.body_text(
-        'Images were normalized using ImageNet statistics (mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) '
-        'to facilitate transfer learning. The dataset was split into training (70%), validation (15%), and test (15%) '
-        'sets using stratified sampling to preserve class distributions. Data augmentation during training included '
-        'horizontal/vertical flips, rotations (up to 90 degrees), brightness/contrast adjustments, Gaussian noise, '
-        'and elastic deformations to improve generalization.'
-    )
-    
-    pdf.subsection_title('3.3 Model Architecture')
-    pdf.body_text(
-        'A custom CNN architecture was designed with four convolutional stages, each containing two 3x3 convolutional '
-        'layers followed by batch normalization, ReLU activation, and 2x2 max pooling. Filter progression follows '
-        '[32, 64, 128, 256]. Global average pooling reduces spatial dimensions before two fully connected layers '
-        '[512, 256] with dropout (p=0.5) and batch normalization. The final layer outputs logits for binary classification.'
-    )
-    
-    pdf.subsection_title('3.4 Training Configuration')
-    pdf.body_text(
-        'The model was trained using AdamW optimizer (lr=1e-3, weight_decay=1e-4) with CrossEntropyLoss. '
-        'Learning rate scheduling used ReduceLROnPlateau (factor=0.5, patience=10). Early stopping monitored '
-        'validation loss with patience=15 epochs. Mixed precision training (FP16) was employed for memory efficiency. '
-        'Class weights were computed to address class imbalance.'
-    )
-    
-    # 4. Results
-    pdf.add_page()
-    pdf.section_title('4. Results')
-    
-    # Try to load actual results
-    results_path = Path("assets/models/best_model.pth")
-    if results_path.parent.exists():
-        eval_files = list(results_path.parent.glob("eval_plots/evaluation_results.json"))
-        if not eval_files:
-            eval_files = list(results_path.parent.glob("evaluation_results.json"))
-        
-        if eval_files:
-            with open(eval_files[0], 'r') as f:
-                results = json.load(f)
-            
-            pdf.subsection_title('4.1 Quantitative Results')
-            pdf.body_text(
-                f'The model achieved the following performance on the held-out test set: '
-                f'Accuracy = {results.get("accuracy", 0):.4f}, '
-                f'Precision = {results.get("precision", 0):.4f}, '
-                f'Recall = {results.get("recall", 0):.4f}, '
-                f'F1-Score = {results.get("f1_score", 0):.4f}, '
-                f'ROC-AUC = {results.get("roc_auc", 0):.4f}.'
-            )
-            
-            if 'bootstrap_ci' in results:
-                pdf.body_text(
-                    f'Bootstrap 95% confidence intervals: '
-                    f'Accuracy [{results["bootstrap_ci"]["accuracy"][0]:.4f}, {results["bootstrap_ci"]["accuracy"][1]:.4f}], '
-                    f'F1-Score [{results["bootstrap_ci"]["f1_score"][0]:.4f}, {results["bootstrap_ci"]["f1_score"][1]:.4f}].'
-                )
-            
-            pdf.subsection_title('4.2 Confusion Matrix Analysis')
-            cm = results.get('confusion_matrix', [[0, 0], [0, 0]])
-            pdf.body_text(
-                f'True Negatives: {cm[0][0]}, False Positives: {cm[0][1]}, '
-                f'False Negatives: {cm[1][0]}, True Positives: {cm[1][1]}. '
-                f'The false negative rate (missed cancers) is {cm[1][0]/(cm[1][0]+cm[1][1])*100:.2f}%.'
-            )
-        else:
-            pdf.body_text('Results will be populated after model evaluation.')
-    else:
-        pdf.body_text('Results will be populated after model evaluation.')
-    
-    pdf.subsection_title('4.3 Training Dynamics')
-    pdf.body_text(
-        'Training converged within 50-80 epochs with early stopping. Validation loss showed consistent decrease '
-        'without overfitting, attributed to dropout regularization, data augmentation, and batch normalization. '
-        'Learning rate reduction events occurred at epochs 20, 35, and 50, each improving validation performance.'
-    )
-    
-    # 5. Conclusions
-    pdf.add_page()
-    pdf.section_title('5. Conclusions')
-    pdf.body_text(
-        'This work presents a complete deep learning pipeline for IDC detection from histopathology images. '
-        'The custom CNN architecture, combined with rigorous preprocessing, data augmentation, and comprehensive '
-        'evaluation, achieves strong performance suitable for clinical decision support. Key findings include:'
-    )
-    pdf.bullet_point('The custom CNN architecture effectively learns discriminative features for IDC detection.')
-    pdf.bullet_point('Stratified data splitting and class-weighted loss effectively handle class imbalance.')
-    pdf.bullet_point('Data augmentation significantly improves generalization to unseen patients.')
-    pdf.bullet_point('Bootstrap confidence intervals provide reliable uncertainty quantification.')
-    pdf.bullet_point('The interactive dashboard enables real-time model monitoring and clinical deployment.')
-    
-    pdf.body_text(
-        'Future work includes: (1) validation on multi-institutional datasets, (2) integration of attention '
-        'mechanisms for interpretability, (3) extension to multi-class classification (DCIS, IDC, benign), '
-        'and (4) deployment as a clinical decision support system with regulatory compliance.'
-    )
-    
-    # 6. References
-    pdf.add_page()
-    pdf.section_title('6. References')
-    
-    references = [
-        'Efron, B., & Tibshirani, R. J. (1993). An introduction to the bootstrap. Chapman & Hall/CRC.',
-        'He, K., Zhang, X., Ren, S., & Sun, J. (2016). Deep residual learning for image recognition. '
-        'Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, 770-778.',
-        'Ioffe, S., & Szegedy, C. (2015). Batch normalization: Accelerating deep network training by reducing '
-        'internal covariate shift. International Conference on Machine Learning, 448-456.',
-        'LeCun, Y., Bottou, L., Bengio, Y., & Haffner, P. (1998). Gradient-based learning applied to document '
-        'recognition. Proceedings of the IEEE, 86(11), 2278-2324.',
-        'Pan, S. J., & Yang, Q. (2010). A survey on transfer learning. IEEE Transactions on Knowledge and Data '
-        'Engineering, 22(10), 1345-1359.',
-        'Srivastava, N., Hinton, G., Krizhevsky, A., Sutskever, I., & Salakhutdinov, R. (2014). Dropout: A '
-        'simple way to prevent neural networks from overfitting. Journal of Machine Learning Research, 15(1), 1929-1958.',
-        'Tajbakhsh, N., Shin, J. Y., Gurudu, S. R., Hurst, R. T., Kendall, C. B., Gotway, M. B., & Liang, J. (2016). '
-        'Convolutional neural networks for medical image analysis: Full training or fine tuning? IEEE Transactions '
-        'on Medical Imaging, 35(5), 1299-1312.'
-    ]
-    
-    for i, ref in enumerate(references, 1):
-        pdf.body_text(f'{i}. {ref}')
-    
-    # Save
-    output_path = Path("reports/technical_report.pdf")
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    pdf.output(str(output_path))
-    
-    return str(output_path)
 
 
 if __name__ == "__main__":
