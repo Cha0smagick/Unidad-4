@@ -17,7 +17,11 @@ from typing import Dict, List, Optional, Any
 from PIL import Image
 import io
 
-# Import project modules (installed via pyproject.toml + -e .)
+# Import project modules - add src to path for Streamlit Cloud
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
 from src.utils.config import config
 from src.models import create_model
 from src.data import create_preprocessor, BreastCancerDataset, get_val_transforms

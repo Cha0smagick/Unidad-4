@@ -19,6 +19,9 @@ import sys
 import os
 from pathlib import Path
 
+# Add src to path for Streamlit Cloud
+sys.path.insert(0, str(Path(__file__).parent / "src"))
+
 import torch
 import numpy as np
 
