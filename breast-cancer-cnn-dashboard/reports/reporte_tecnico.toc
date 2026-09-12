@@ -1,0 +1,33 @@
+\babel@toc {spanish}{}\relax 
+\contentsline {section}{\numberline {1}Introducción}{3}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Objetivos}{3}{subsection.1.1}%
+\contentsline {section}{\numberline {2}Marco Teórico}{4}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Redes Neuronales Convolucionales}{4}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Transfer Learning}{5}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Validación Cruzada y Optimización de Hiperparámetros}{5}{subsection.2.3}%
+\contentsline {section}{\numberline {3}Metodología}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Dataset CBIS-DDSM}{5}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Preprocesamiento de Datos}{6}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Arquitecturas Evaluadas}{7}{subsection.3.3}%
+\contentsline {paragraph}{CustomCNN (Arquitectura Personalizada)}{7}{section*.4}%
+\contentsline {paragraph}{ResNet18 (Transfer Learning)}{7}{section*.5}%
+\contentsline {paragraph}{EfficientNet-B0 (Transfer Learning)}{7}{section*.6}%
+\contentsline {subsection}{\numberline {3.4}Configuración de Entrenamiento}{8}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}Validación Cruzada y Optimización de Hiperparámetros}{8}{subsection.3.5}%
+\contentsline {subsection}{\numberline {3.6}Métricas de Evaluación}{8}{subsection.3.6}%
+\contentsline {section}{\numberline {4}Resultados y Análisis}{9}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Optimización de Hiperparámetros}{9}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Validación Cruzada K-Fold (K=5)}{9}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Resultados en Conjunto de Prueba Independiente}{9}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Análisis Comparativo y Discusión}{12}{subsection.4.4}%
+\contentsline {paragraph}{CustomCNN}{12}{section*.12}%
+\contentsline {paragraph}{ResNet18}{12}{section*.13}%
+\contentsline {paragraph}{EfficientNet-B0}{13}{section*.14}%
+\contentsline {section}{\numberline {5}Conclusiones}{13}{section.5}%
+\contentsline {section}{\numberline {6}Trabajo Futuro}{14}{section.6}%
+\contentsline {section}{Referencias}{14}{section*.15}%
+\contentsline {section}{Referencias}{14}{section*.16}%
+\contentsline {section}{\numberline {A}Anexos}{16}{appendix.Alph1}%
+\contentsline {subsection}{\numberline {A.1}Configuración Completa de Hiperparámetros}{16}{subsection.Alph1.1}%
+\contentsline {subsection}{\numberline {A.2}Matrices de Confusión por Clase}{16}{subsection.Alph1.2}%
+\contentsline {subsection}{\numberline {A.3}Curvas de Entrenamiento Detalladas}{16}{subsection.Alph1.3}%

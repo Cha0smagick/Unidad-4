@@ -366,10 +366,10 @@ def main():
                     st.dataframe(ci_df, use_container_width=True)
             else:
                 st.info("No evaluation results found. Run evaluation to generate metrics.")
-                
-                if st.button("Run Evaluation"):
-                    with st.spinner("Evaluating model..."):
-                        run_evaluation(selected_model, device, threshold)
+            
+            if st.button("Run Evaluation"):
+                with st.spinner("Evaluating model..."):
+                    run_evaluation(selected_model, device, threshold)
         else:
             st.info("Select a model from sidebar to view evaluation")
     
@@ -493,14 +493,15 @@ def main():
                 with st.expander("View Full Exploration Report"):
                     report = load_evaluation_results(explore_path)  # Reuse JSON loader
                     st.json(report)
-else:
+            
+            # Note: Technical report is generated separately as LaTeX/PDF in the repository
+            # See scripts/generate_latex_report.py and reports/reporte_tecnico.tex
+        
+        else:
             st.info("Run data preprocessing to generate split information")
-    
-    # Note: Technical report is generated separately as LaTeX/PDF in the repository
-    # See scripts/generate_latex_report.py and reports/reporte_tecnico.tex
-    
-    # run_evaluation function
-    def run_evaluation(model_path: str, device: str, threshold: float):
+
+
+def run_evaluation(model_path: str, device: str, threshold: float):
     """Run model evaluation and save results."""
     device = torch.device(device)
     model = load_model(model_path, 'CustomCNN', device)
