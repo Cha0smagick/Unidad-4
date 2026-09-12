@@ -1,3 +1,6 @@
+# Core package (install in editable mode)
+-e .
+
 # Core Deep Learning
 torch>=2.1.0
 torchvision>=0.16.0

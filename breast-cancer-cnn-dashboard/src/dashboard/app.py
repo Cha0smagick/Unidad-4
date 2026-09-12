@@ -17,10 +17,7 @@ from typing import Dict, List, Optional, Any
 from PIL import Image
 import io
 
-# Import project modules
-import sys
-sys.path.append(str(Path(__file__).parent.parent.parent))
-
+# Import project modules (installed via pyproject.toml + -e .)
 from src.utils.config import config
 from src.models import create_model
 from src.data import create_preprocessor, BreastCancerDataset, get_val_transforms
