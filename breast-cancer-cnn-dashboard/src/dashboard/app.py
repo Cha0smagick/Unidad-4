@@ -12,6 +12,7 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 import json
 import os
+import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from PIL import Image
@@ -63,6 +64,15 @@ st.markdown("""
     .stTabs [data-baseweb="tab-list"] {
         gap: 2rem;
     }
+    .dataset-status {
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin: 0.5rem 0;
+    }
+    .dataset-success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+    .dataset-warning { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; }
+    .dataset-error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+    .dataset-info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -105,6 +115,74 @@ def load_split_info(split_path: str):
         return json.load(f)
 
 
+@st.cache_data
+def check_dataset_status() -> Dict[str, Any]:
+    """Check the status of the dataset directories."""
+    data_dir = Path("data")
+    raw_dir = Path("data/raw")
+    processed_dir = Path("data/processed")
+    
+    status = {
+        "data_dir_exists": data_dir.exists(),
+        "raw_dir_exists": raw_dir.exists(),
+        "raw_has_files": raw_dir.exists() and any(raw_dir.iterdir()),
+        "processed_dir_exists": processed_dir.exists(),
+        "processed_has_files": processed_dir.exists() and any(processed_dir.iterdir()),
+        "model_dir_exists": Path("assets/models").exists(),
+        "model_files": list(Path("assets/models").glob("**/*.pth")) if Path("assets/models").exists() else []
+    }
+    
+    # Count files in raw
+    if status["raw_has_files"]:
+        status["raw_file_count"] = len(list(raw_dir.rglob("*.dcm"))) + len(list(raw_dir.rglob("*.DCM")))
+    else:
+        status["raw_file_count"] = 0
+        
+    return status
+
+
+@st.cache_resource
+def download_cbis_ddsm_dataset() -> Dict[str, Any]:
+    """
+    Download CBIS-DDSM dataset from Kaggle using kagglehub.
+    Returns status dict with success/error info.
+    """
+    try:
+        import kagglehub
+        from kagglehub import KaggleDatasetAdapter
+        
+        # Create directories
+        raw_dir = Path("data/raw")
+        raw_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Download dataset - this downloads the entire dataset to kagglehub cache
+        # Then we need to copy/move files to our data/raw directory
+        path = kagglehub.dataset_download("awsaf49/cbis-ddsm-breast-cancer-image-dataset")
+        
+        # Copy DICOM files to our data/raw directory
+        copied = 0
+        for root, dirs, files in os.walk(path):
+            for f in files:
+                if f.lower().endswith(('.dcm', '.dicom')):
+                    src = Path(root) / f
+                    dst = Path("data/raw") / f
+                    shutil.copy2(src, dst)
+                    copied += 1
+        
+        return {
+            "success": True,
+            "message": f"Dataset downloaded successfully! {copied} DICOM files copied to data/raw/",
+            "copied_files": copied,
+            "source_path": path
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error downloading dataset: {str(e)}",
+            "error": str(e)
+        }
+
+
 def main():
     """Main dashboard application."""
     
@@ -115,6 +193,42 @@ def main():
     # Sidebar
     with st.sidebar:
         st.header("⚙️ Configuration")
+        
+        # Dataset Management Section
+        st.subheader("📂 Dataset Management (CBIS-DDSM)")
+        
+        # Check dataset status
+        status = check_dataset_status()
+        
+        # Display status
+        if status["raw_has_files"]:
+            st.markdown(f'<div class="dataset-status dataset-success">✅ Dataset ready: {status["raw_file_count"]} DICOM files in data/raw/</div>', unsafe_allow_html=True)
+        elif status["raw_dir_exists"]:
+            st.markdown('<div class="dataset-status dataset-warning">⚠️ data/raw/ exists but is empty</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="dataset-status dataset-error">❌ data/raw/ directory not found</div>', unsafe_allow_html=True)
+        
+        # Download button
+        if not status["raw_has_files"]:
+            if st.button("📥 Download CBIS-DDSM from Kaggle", type="primary", use_container_width=True):
+                with st.spinner("Downloading CBIS-DDSM dataset from Kaggle... This may take a few minutes."):
+                    result = download_cbis_ddsm_dataset()
+                    if result["success"]:
+                        st.success(result["message"])
+                        st.rerun()
+                    else:
+                        st.error(result["message"])
+        else:
+            if st.button("🔄 Re-download Dataset", use_container_width=True):
+                with st.spinner("Re-downloading CBIS-DDSM dataset from Kaggle..."):
+                    result = download_cbis_ddsm_dataset()
+                    if result["success"]:
+                        st.success(result["message"])
+                        st.rerun()
+                    else:
+                        st.error(result["message"])
+        
+        st.divider()
         
         # Model selection
         model_dir = Path("assets/models")
@@ -158,7 +272,7 @@ def main():
             if raw_dir.exists() and any(raw_dir.iterdir()):
                 st.success("Data directory found")
             else:
-                st.warning("Data directory exists but raw/ is empty - run preprocessing or add DICOM files")
+                st.warning("Data directory exists but raw/ is empty - click 'Download CBIS-DDSM from Kaggle' above")
         else:
             st.warning("Data directory not found")
         
