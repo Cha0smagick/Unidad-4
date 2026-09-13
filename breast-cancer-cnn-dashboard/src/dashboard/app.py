@@ -1,6 +1,7 @@
 """
 Interactive Streamlit dashboard for Breast Cancer CNN Classifier.
 Provides real-time visualization of training progress, model evaluation, and predictions.
+Works 100% locally with files from the repository (data/raw/).
 """
 
 import streamlit as st
@@ -12,7 +13,6 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 import json
 import os
-import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from PIL import Image
@@ -141,48 +141,6 @@ def check_dataset_status() -> Dict[str, Any]:
     return status
 
 
-@st.cache_resource
-def download_cbis_ddsm_dataset() -> Dict[str, Any]:
-    """
-    Download CBIS-DDSM dataset from Kaggle using kagglehub.
-    Returns status dict with success/error info.
-    """
-    try:
-        import kagglehub
-        from kagglehub import KaggleDatasetAdapter
-        
-        # Create directories
-        raw_dir = Path("data/raw")
-        raw_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Download dataset - this downloads the entire dataset to kagglehub cache
-        # Then we need to copy/move files to our data/raw directory
-        path = kagglehub.dataset_download("awsaf49/cbis-ddsm-breast-cancer-image-dataset")
-        
-        # Copy DICOM files to our data/raw directory
-        copied = 0
-        for root, dirs, files in os.walk(path):
-            for f in files:
-                if f.lower().endswith(('.dcm', '.dicom')):
-                    src = Path(root) / f
-                    dst = Path("data/raw") / f
-                    shutil.copy2(src, dst)
-                    copied += 1
-        
-        return {
-            "success": True,
-            "message": f"Dataset downloaded successfully! {copied} DICOM files copied to data/raw/",
-            "copied_files": copied,
-            "source_path": path
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error downloading dataset: {str(e)}",
-            "error": str(e)
-        }
-
-
 def main():
     """Main dashboard application."""
     
@@ -194,8 +152,8 @@ def main():
     with st.sidebar:
         st.header("⚙️ Configuration")
         
-        # Dataset Management Section
-        st.subheader("📂 Dataset Management (CBIS-DDSM)")
+        # Dataset Status Section (local only)
+        st.subheader("📂 Dataset Status (Local Repository)")
         
         # Check dataset status
         status = check_dataset_status()
@@ -204,29 +162,11 @@ def main():
         if status["raw_has_files"]:
             st.markdown(f'<div class="dataset-status dataset-success">✅ Dataset ready: {status["raw_file_count"]} DICOM files in data/raw/</div>', unsafe_allow_html=True)
         elif status["raw_dir_exists"]:
-            st.markdown('<div class="dataset-status dataset-warning">⚠️ data/raw/ exists but is empty</div>', unsafe_allow_html=True)
+            st.markdown('<div class="dataset-status dataset-warning">⚠️ data/raw/ exists but is empty — add your DICOM files here</div>', unsafe_allow_html=True)
         else:
             st.markdown('<div class="dataset-status dataset-error">❌ data/raw/ directory not found</div>', unsafe_allow_html=True)
         
-        # Download button
-        if not status["raw_has_files"]:
-            if st.button("📥 Download CBIS-DDSM from Kaggle", type="primary", use_container_width=True):
-                with st.spinner("Downloading CBIS-DDSM dataset from Kaggle... This may take a few minutes."):
-                    result = download_cbis_ddsm_dataset()
-                    if result["success"]:
-                        st.success(result["message"])
-                        st.rerun()
-                    else:
-                        st.error(result["message"])
-        else:
-            if st.button("🔄 Re-download Dataset", use_container_width=True):
-                with st.spinner("Re-downloading CBIS-DDSM dataset from Kaggle..."):
-                    result = download_cbis_ddsm_dataset()
-                    if result["success"]:
-                        st.success(result["message"])
-                        st.rerun()
-                    else:
-                        st.error(result["message"])
+        st.info("💡 Place your .dcm/.DCM files in the `data/raw/` folder of the repository. The dashboard will auto-detect them.")
         
         st.divider()
         
@@ -272,7 +212,7 @@ def main():
             if raw_dir.exists() and any(raw_dir.iterdir()):
                 st.success("Data directory found")
             else:
-                st.warning("Data directory exists but raw/ is empty - click 'Download CBIS-DDSM from Kaggle' above")
+                st.warning("Data directory exists but raw/ is empty — add DICOM files to data/raw/")
         else:
             st.warning("Data directory not found")
         
